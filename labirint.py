@@ -79,26 +79,31 @@ class Bullet(GameSprite):
         if self.rect.x > 700:
             self.kill()
 
-        
 
 wall_2 = GameSprite('platform2_v.png', 360, 40, 120, 357)
 wall_4 = GameSprite('platform2_v.png', 275, 40, 270, 170)
 wall_1 = GameSprite('platform2.png', 49, 420, 120, 150)
 wall_3 = GameSprite('platform2.png', 49, 210, 260, 0)
+locked_wall = GameSprite('platform2_lock.png', 160, 50, -10, 380)
 target = GameSprite('pac-1.png', 75, 75, 169, 417)
-hero = Player('hero.png', 70, 70, 50, 400, 0, 0)
+hero = Player('hero.png', 60, 60, 50, 300, 0, 0)
 cyborg = enemy('cyborg.png', 70, 70, 600, 80, 2, 639, 309)
 cyborg2 = enemy('cyborg.png', 70, 70, 550, 210, 4, 639, 169)
-cyborg3 = enemy('cyborg.png', 70, 70, 575, 420, 3, 639, 399)
+cyborg3 = enemy('cyborg.png', 70, 70, 575, 420, 3, 639, 169)
 win_image = transform.scale(image.load('thumb.jpg'), (700, 500))
 lose_image = transform.scale(image.load('game-over_1.png'), (700, 500))
-gun = GameSprite('gun.png', 50, 30, 320, 30)
+gun = GameSprite('gun.png', 50, 30, 40, 450)
+key = GameSprite('key.png', 50, 30, 310, 40)
+retry_button = GameSprite("retry_btn.png", 117, 50, 5, 5)
+
+
 
 barriers = sprite.Group()
 barriers.add(wall_1)
 barriers.add(wall_2)
 barriers.add(wall_3)
 barriers.add(wall_4)
+barriers.add(locked_wall)
 
 bullets = sprite.Group()
 
@@ -107,12 +112,52 @@ cyborgs.add(cyborg)
 cyborgs.add(cyborg2)
 cyborgs.add(cyborg3)
 
+target_vis = False
+
 has_gun = False
+has_key = False
 run = True
 finish = False
 count = 0
 
+level = 1
+game_over = False
+
+def reset_game():
+    global hero, cyborg, cyborg2, cyborg3, target, target_vis
+    global barriers, bullets, cyborgs, has_gun, has_key, finish, run, count
+    global wall_1, wall_2, wall_3, wall_4, locked_wall, key, gun
+
+    hero = Player('hero.png', 60, 60, 50, 300, 0, 0)
+    cyborg = enemy('cyborg.png', 70, 70, 600, 80, 2, 639, 309)
+    cyborg2 = enemy('cyborg.png', 70, 70, 550, 210, 4, 639, 169)
+    cyborg3 = enemy('cyborg.png', 70, 70, 575, 420, 3, 639, 169)
+    target = GameSprite('pac-1.png', 75, 75, 169, 417)
+    target_vis = False
+
+    wall_2 = GameSprite('platform2_v.png', 360, 40, 120, 357)
+    wall_4 = GameSprite('platform2_v.png', 275, 40, 270, 170)
+    wall_1 = GameSprite('platform2.png', 49, 420, 120, 150)
+    wall_3 = GameSprite('platform2.png', 49, 210, 260, 0)
+    locked_wall = GameSprite('platform2_lock.png', 160, 50, -10, 380)
+    key = GameSprite('key.png', 50, 30, 310, 40)
+    gun = GameSprite('gun.png', 50, 30, 40, 450)
+
+    barriers = sprite.Group()
+    barriers.add(wall_1, wall_2, wall_3, wall_4, locked_wall)
+
+    bullets = sprite.Group()
+
+    cyborgs = sprite.Group()
+    cyborgs.add(cyborg, cyborg2, cyborg3)
+
+    has_gun = False
+    has_key = False
+    finish = False
+    count = 0
+
 while run:
+    
     time.delay(50)
     for e in event.get():
         if e.type == QUIT:
@@ -130,6 +175,7 @@ while run:
             if e.key == K_SPACE:
                 if has_gun == True:
                     hero.Fire()
+            
         
         if e.type == KEYUP:
             if e.key == K_a:
@@ -141,9 +187,13 @@ while run:
             if e.key == K_s:
                 hero.y_speed = 0
                 
+        if e.type == MOUSEBUTTONDOWN:
+                if retry_button.rect.collidepoint(e.pos):
+                    reset_game()
+            
+                
     if finish != True:
         window.fill(bg)
-        target.reset()
         hero.update()
         hero.reset()
         wall_2.reset()
@@ -159,23 +209,39 @@ while run:
 
         sprite.groupcollide(bullets, barriers, True, False)
         sprite.groupcollide(bullets, cyborgs, True, True)
+        
+        if len(cyborgs) == 0:
+            target_vis = True
+        
+        if sprite.collide_rect(hero, key):
+            has_key = True
+            locked_wall.kill()
+        else:
+            if has_key == False:
+                key.reset()
+                locked_wall.reset()
 
         if sprite.collide_rect(hero, gun):
             has_gun = True
         else:
             if has_gun == False:
                 gun.reset()
+                
+        if target_vis == True:
+            target.reset()
 
-        #Win condition
-        if sprite.collide_rect(hero, target):
+        if target_vis and sprite.collide_rect(hero, target):
             finish = True
-            window.blit(win_image, (0, 0))
-
-        #lose condition
         if sprite.spritecollide(hero, cyborgs, False):
             finish = True
-            window.blit(lose_image, (0,0))
 
+
+    else:
+        if target_vis and sprite.collide_rect(hero, target):
+            window.blit(win_image, (0, 0))
+        else:
+            window.blit(lose_image, (0, 0))
+        retry_button.reset()
 
     display.update()
 
